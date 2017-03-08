@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 using Facebook;
+using System.Configuration;
 
 namespace FacebookPostHIstory
 {
@@ -27,7 +28,9 @@ namespace FacebookPostHIstory
 
         private void button1_Click(object sender, EventArgs e)
         {
-            var url = GenerateLoginUrl("1093443474080502", "a84b2907d84c3bf4114981b528d1d05c", "user_posts");
+            var appId = ConfigurationManager.AppSettings["appId"];
+            var secret = ConfigurationManager.AppSettings["secret"];
+            var url = GenerateLoginUrl(appId, secret, "user_posts");
             webBrowser1.Navigate(url);
         }
 
