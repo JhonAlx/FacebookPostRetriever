@@ -4,6 +4,7 @@ using System.Data;
 using System.Dynamic;
 using System.Globalization;
 using System.IO;
+using System.Threading;
 using Facebook;
 using JackLeitch.RateGate;
 using OfficeOpenXml;
@@ -19,28 +20,31 @@ namespace PostRetriever
 
         private static void Main(string[] args)
         {
-            var secret = string.Empty;
-            var notifyStop = true;
-
-            //foreach (var arg in args)
-            //    Console.WriteLine(arg);
-
-            if (args.Length > 0)
-                secret = args[0];
-
-            if (secret.Equals("Hello"))
+            try
             {
-                _accessToken = args[1];
-                _filePath = args[2];
-                _start = DateTime.Parse(args[3]);
-                _end = DateTime.Parse(args[4]);
+                var secret = string.Empty;
+                var notifyStop = true;
 
-                var ranges = SplitDateRange(_start, _end, 15);
+                //foreach (var arg in args)
+                //    Console.WriteLine(arg);
 
-                Log("INFO", "Values loaded! Starting post download");
+                if (args.Length > 0)
+                    secret = args[0];
 
-                using (var rg = new RateGate(1400, TimeSpan.FromHours(1)))
+                if (secret.Equals("Hello"))
                 {
+                    _accessToken = args[1];
+                    _filePath = args[2];
+                    _start = DateTime.Parse(args[3]);
+                    _end = DateTime.Parse(args[4]);
+                    var dt = new DataTable();
+
+                    var ranges = SplitDateRange(_start, _end, 15);
+
+                    Log("INFO", "Values loaded! Starting post download");
+
+                    var rg = new RateGate(1400, TimeSpan.FromHours(1));
+
                     foreach (var range in ranges)
                     {
                         var fb = new FacebookClient(_accessToken);
@@ -54,10 +58,11 @@ namespace PostRetriever
 
                         parameters.until = range.Item2.ToString("yyyy-MM-dd");
 
-                        var dt = new DataTable();
-
-                        dt.Columns.Add(new DataColumn("datestamp"));
-                        dt.Columns.Add(new DataColumn("status"));
+                        if (!dt.Columns.Contains("datestamp") && !dt.Columns.Contains("status"))
+                        {
+                            dt.Columns.Add(new DataColumn("datestamp"));
+                            dt.Columns.Add(new DataColumn("status"));
+                        }
 
                         while (!rg.WaitToProceed(0))
                             if (notifyStop)
@@ -75,9 +80,9 @@ namespace PostRetriever
                         Log("INFO",
                             $"Retrieving posts for range {range.Item1:yyyy-MM-dd} - {range.Item2:yyyy-MM-dd}");
 
-                        var result = (IDictionary<string, object>) fb.Get("me/posts", parameters);
+                        var result = (IDictionary<string, object>)fb.Get("me/posts", parameters);
 
-                        var postCount = ((JsonArray) result["data"]).Count;
+                        var postCount = ((JsonArray)result["data"]).Count;
 
                         Log("INFO", $"Processing {postCount} posts");
 
@@ -85,7 +90,7 @@ namespace PostRetriever
                         {
                             while (postCount > 0)
                             {
-                                foreach (JsonObject item in (JsonArray) result["data"])
+                                foreach (JsonObject item in (JsonArray)result["data"])
                                 {
                                     DataRow row;
 
@@ -114,7 +119,7 @@ namespace PostRetriever
                                         (IDictionary<string, object>)
                                         fb.Get($"{item["id"]}/comments", commentParameters);
 
-                                    var comments = (JsonArray) commentsResult["data"];
+                                    var comments = (JsonArray)commentsResult["data"];
 
                                     if (comments.Count > 0)
                                     {
@@ -149,9 +154,9 @@ namespace PostRetriever
                                                     dt.Columns.Add("comment");
                                                 }
 
-                                                row["user_id"] = ((JsonObject) comment["from"])["id"];
+                                                row["user_id"] = ((JsonObject)comment["from"])["id"];
                                                 row["comment_timestamp"] = comment["created_time"];
-                                                row["name"] = ((JsonObject) comment["from"])["name"];
+                                                row["name"] = ((JsonObject)comment["from"])["name"];
                                                 row["comment"] = comment["message"];
 
                                                 var repliesBatchCounter = 0;
@@ -179,7 +184,7 @@ namespace PostRetriever
                                                 var repliesResult =
                                                     (IDictionary<string, object>)
                                                     fb.Get($"{comment["id"]}/comments", repliesParameters);
-                                                var replies = (JsonArray) repliesResult["data"];
+                                                var replies = (JsonArray)repliesResult["data"];
 
                                                 if (replies.Count > 0)
                                                 {
@@ -187,24 +192,24 @@ namespace PostRetriever
                                                     {
                                                         foreach (JsonObject reply in replies)
                                                         {
-                                                            if (!dt.Columns.Contains($"reply_timestamp") &&
-                                                                !dt.Columns.Contains($"reply") &&
-                                                                !dt.Columns.Contains($"reply_user_id") &&
-                                                                !dt.Columns.Contains($"reply_name"))
+                                                            if (!dt.Columns.Contains("reply_timestamp") &&
+                                                                !dt.Columns.Contains("reply") &&
+                                                                !dt.Columns.Contains("reply_user_id") &&
+                                                                !dt.Columns.Contains("reply_name"))
                                                             {
-                                                                dt.Columns.Add($"reply_timestamp");
-                                                                dt.Columns.Add($"reply_user_id");
-                                                                dt.Columns.Add($"reply_name");
-                                                                dt.Columns.Add($"reply");
+                                                                dt.Columns.Add("reply_timestamp");
+                                                                dt.Columns.Add("reply_user_id");
+                                                                dt.Columns.Add("reply_name");
+                                                                dt.Columns.Add("reply");
                                                             }
 
                                                             var newRow = dt.NewRow();
                                                             newRow.ItemArray = row.ItemArray;
 
-                                                            row[$"reply_user_id"] = ((JsonObject) reply["from"])["id"];
-                                                            row[$"reply_timestamp"] = reply["created_time"];
-                                                            row[$"reply_name"] = ((JsonObject) reply["from"])["name"];
-                                                            row[$"reply"] = reply["message"];
+                                                            row["reply_user_id"] = ((JsonObject)reply["from"])["id"];
+                                                            row["reply_timestamp"] = reply["created_time"];
+                                                            row["reply_name"] = ((JsonObject)reply["from"])["name"];
+                                                            row["reply"] = reply["message"];
 
                                                             dt.Rows.Add(row);
 
@@ -235,7 +240,7 @@ namespace PostRetriever
                                                         repliesResult =
                                                             (IDictionary<string, object>)
                                                             fb.Get($"{comment["id"]}/comments", repliesParameters);
-                                                        replies = (JsonArray) repliesResult["data"];
+                                                        replies = (JsonArray)repliesResult["data"];
                                                     }
                                                 }
                                                 else
@@ -268,7 +273,7 @@ namespace PostRetriever
                                             commentsResult =
                                                 (IDictionary<string, object>)
                                                 fb.Get($"{item["id"]}/comments", commentParameters);
-                                            comments = (JsonArray) commentsResult["data"];
+                                            comments = (JsonArray)commentsResult["data"];
                                         }
                                     }
                                     else
@@ -314,26 +319,40 @@ namespace PostRetriever
                                 Log("INFO",
                                     $"Checking for more posts on range {range.Item1:yyyy-MM-dd} - {range.Item2:yyyy-MM-dd}");
 
-                                result = (IDictionary<string, object>) fb.Get("me/posts", parameters);
-                                postCount = ((JsonArray) result["data"]).Count;
+                                result = (IDictionary<string, object>)fb.Get("me/posts", parameters);
+                                postCount = ((JsonArray)result["data"]).Count;
 
                                 if (dt.Rows.Count > 0)
                                     SaveData(dt);
                             }
                         }
+                        catch (FacebookOAuthException)
+                        {
+                            Log("ERROR", "Limit reached");
+                            Log("WARNING", "Sleeping for 1 hour");
+                            SaveData(dt);
+                            Thread.Sleep(TimeSpan.FromHours(1));
+                            rg = new RateGate(1400, TimeSpan.FromHours(1));
+                        }
                         catch (Exception ex)
                         {
                             Log("ERROR", ex.Message + Environment.NewLine + ex.StackTrace);
+                            SaveData(dt);
                         }
                     }
-                }
 
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadKey();
+                    Console.WriteLine("Press any key to continue...");
+                    Console.ReadKey();
+                    rg.Dispose();
+                }
+                else
+                {
+                    Usage();
+                }
             }
-            else
+            catch (Exception e)
             {
-                Usage();
+                Log("ERROR", $"Global error {e.Message} - {e.StackTrace}");
             }
         }
 
@@ -405,6 +424,11 @@ namespace PostRetriever
             }
 
             Console.WriteLine(status);
+
+            using (var sw = new StreamWriter("LogFile.txt", true))
+            {
+                sw.WriteLine(status);
+            }
         }
 
         public string ReturnPath()

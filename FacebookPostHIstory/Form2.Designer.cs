@@ -1,4 +1,4 @@
-﻿namespace FacebookPostHIstory
+﻿namespace FacebookPostHistory
 {
     partial class Form2
     {

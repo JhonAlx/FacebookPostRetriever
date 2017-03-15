@@ -7,8 +7,8 @@
     <ProjectGuid>{C8F8BB1F-FB55-4758-82CD-7AC2E8D2990A}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>FacebookPostHIstory</RootNamespace>
-    <AssemblyName>FacebookPostHIstory</AssemblyName>
+    <RootNamespace>FacebookPostHistory</RootNamespace>
+    <AssemblyName>FacebookPostHistory</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -121,6 +121,7 @@
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
     <None Include="packages.config" />
     <None Include="Properties\app.manifest" />

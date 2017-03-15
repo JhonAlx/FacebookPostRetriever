@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace FacebookPostHIstory
+namespace FacebookPostHistory
 {
     static class Program
     {

@@ -3,7 +3,7 @@ using System.Windows.Forms;
 using Facebook;
 using System.Configuration;
 
-namespace FacebookPostHIstory
+namespace FacebookPostHistory
 {
     public partial class Form1 : Form
     {

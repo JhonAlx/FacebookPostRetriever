@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using PostRetriever;
 
-namespace FacebookPostHIstory
+namespace FacebookPostHistory
 {
     public partial class Form2 : Form
     {
