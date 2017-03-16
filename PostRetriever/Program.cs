@@ -26,9 +26,6 @@ namespace PostRetriever
                 var secret = string.Empty;
                 var notifyStop = true;
 
-                //foreach (var arg in args)
-                //    Console.WriteLine(arg);
-
                 if (args.Length > 0)
                     secret = args[0];
 
@@ -45,7 +42,7 @@ namespace PostRetriever
                     Log("INFO", "Values loaded! Starting post download");
 
                     var retryPolicy = Policy
-                            .Handle<Exception>()
+                            .Handle<WebExceptionWrapper>()
                             .WaitAndRetry(
                                 3,
                                 retryAttempt => TimeSpan.FromMinutes(Math.Pow(2, retryAttempt)),
@@ -58,7 +55,7 @@ namespace PostRetriever
                                         Log("ERROR", $"{e.InnerException.Message}");
                                 });
 
-                    var rg = new RateGate(1400, TimeSpan.FromMilliseconds(1));
+                    var rg = new RateGate(1400, TimeSpan.FromHours(1));
 
                     foreach (var range in ranges)
                     {
@@ -346,7 +343,7 @@ namespace PostRetriever
                         }
                         catch (Exception ex)
                         {
-                            Log("ERROR", ex.Message + Environment.NewLine + ex.StackTrace);
+                            Log("ERROR", $"{ex.GetType().Name} - {ex.Message}{Environment.NewLine}{ex.StackTrace}");
                             SaveData(dt);
                         }
                     }
@@ -360,9 +357,9 @@ namespace PostRetriever
                     Usage();
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Log("ERROR", $"Global error {e.Message} - {e.StackTrace}");
+                Log("ERROR", $"Global error {ex.GetType().Name} - {ex.Message}{Environment.NewLine}{ex.StackTrace}");
             }
         }
 
