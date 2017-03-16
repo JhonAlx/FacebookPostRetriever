@@ -8,6 +8,7 @@ using System.Threading;
 using Facebook;
 using JackLeitch.RateGate;
 using OfficeOpenXml;
+using Polly;
 
 namespace PostRetriever
 {
@@ -43,7 +44,21 @@ namespace PostRetriever
 
                     Log("INFO", "Values loaded! Starting post download");
 
-                    var rg = new RateGate(1400, TimeSpan.FromHours(1));
+                    var retryPolicy = Policy
+                            .Handle<Exception>()
+                            .WaitAndRetry(
+                                3,
+                                retryAttempt => TimeSpan.FromMinutes(Math.Pow(2, retryAttempt)),
+                                (e, i) =>
+                                {
+                                    Log("ERROR", $"Caught exception {e.GetType().Name}, retrying in 5 minutes.");
+                                    Log("ERROR", $"{e.StackTrace}");
+
+                                    if (e.InnerException != null)
+                                        Log("ERROR", $"{e.InnerException.Message}");
+                                });
+
+                    var rg = new RateGate(1400, TimeSpan.FromMilliseconds(1));
 
                     foreach (var range in ranges)
                     {
@@ -80,7 +95,9 @@ namespace PostRetriever
                         Log("INFO",
                             $"Retrieving posts for range {range.Item1:yyyy-MM-dd} - {range.Item2:yyyy-MM-dd}");
 
-                        var result = (IDictionary<string, object>)fb.Get("me/posts", parameters);
+                        IDictionary<string, object> result = null;
+
+                        retryPolicy.Execute(() => result = (IDictionary<string, object>) fb.Get("me/posts", parameters));
 
                         var postCount = ((JsonArray)result["data"]).Count;
 
@@ -115,9 +132,7 @@ namespace PostRetriever
 
                                     Log("INFO", $"Retrieving comments for post {item["id"]}");
 
-                                    var commentsResult =
-                                        (IDictionary<string, object>)
-                                        fb.Get($"{item["id"]}/comments", commentParameters);
+                                    var commentsResult = retryPolicy.Execute(() => (IDictionary<string, object>)fb.Get($"{item["id"]}/comments", commentParameters));
 
                                     var comments = (JsonArray)commentsResult["data"];
 
@@ -181,9 +196,8 @@ namespace PostRetriever
                                                 Log("INFO",
                                                     $"Retrieving replies for comment {comment["id"]}");
 
-                                                var repliesResult =
-                                                    (IDictionary<string, object>)
-                                                    fb.Get($"{comment["id"]}/comments", repliesParameters);
+                                                var repliesResult = retryPolicy.Execute(() => (IDictionary<string, object>) fb.Get($"{comment["id"]}/comments", repliesParameters));
+
                                                 var replies = (JsonArray)repliesResult["data"];
 
                                                 if (replies.Count > 0)
@@ -237,9 +251,7 @@ namespace PostRetriever
                                                         Log("INFO",
                                                             $"Checking for more replies for comment {comment["id"]}");
 
-                                                        repliesResult =
-                                                            (IDictionary<string, object>)
-                                                            fb.Get($"{comment["id"]}/comments", repliesParameters);
+                                                        repliesResult = retryPolicy.Execute(() => (IDictionary<string, object>)fb.Get($"{comment["id"]}/comments", repliesParameters));
                                                         replies = (JsonArray)repliesResult["data"];
                                                     }
                                                 }
@@ -270,9 +282,7 @@ namespace PostRetriever
                                             Log("INFO",
                                                 $"Checking for more comments on post {item["id"]}");
 
-                                            commentsResult =
-                                                (IDictionary<string, object>)
-                                                fb.Get($"{item["id"]}/comments", commentParameters);
+                                            commentsResult = retryPolicy.Execute(() => (IDictionary<string, object>)fb.Get($"{item["id"]}/comments", commentParameters));
                                             comments = (JsonArray)commentsResult["data"];
                                         }
                                     }
@@ -319,7 +329,7 @@ namespace PostRetriever
                                 Log("INFO",
                                     $"Checking for more posts on range {range.Item1:yyyy-MM-dd} - {range.Item2:yyyy-MM-dd}");
 
-                                result = (IDictionary<string, object>)fb.Get("me/posts", parameters);
+                                retryPolicy.Execute(() => result = (IDictionary<string, object>)fb.Get("me/posts", parameters));
                                 postCount = ((JsonArray)result["data"]).Count;
 
                                 if (dt.Rows.Count > 0)
