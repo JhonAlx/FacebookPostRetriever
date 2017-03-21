@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using Facebook;
 using System.Configuration;
@@ -43,13 +44,29 @@ namespace FacebookPostHistory
             {
                 if (oauthResult.IsSuccess)
                 {
-                    var accesstoken = oauthResult.AccessToken;
+                    var appId = ConfigurationManager.AppSettings["appId"];
+                    var secret = ConfigurationManager.AppSettings["secret"];
+                    Dictionary<string, object> fbParams = new Dictionary<string, object>();
 
-                    var form2 = new Form2 {AccessToken = accesstoken};
+                    fbParams["client_id"] = appId;
+                    fbParams["grant_type"] = "fb_exchange_token";
+                    fbParams["client_secret"] = secret;
+                    fbParams["fb_exchange_token"] = oauthResult.AccessToken;
+                    JsonObject publishedResponse = fb.Get("/oauth/access_token", fbParams) as JsonObject;
 
-                    Hide();
-                    form2.FormClosed += (s, args) => Close();
-                    form2.Show();
+                    if (publishedResponse != null)
+                    {
+                        var form2 = new Form2 { AccessToken = publishedResponse["access_token"].ToString() };
+
+                        Hide();
+                        form2.FormClosed += (s, args) => Close();
+                        form2.Show();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Access token not loaded, please try again", "Error", MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                    }
                 }
                 else
                 {
