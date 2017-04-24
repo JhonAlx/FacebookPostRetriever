@@ -46,12 +46,14 @@ namespace FacebookPostHistory
                 {
                     var appId = ConfigurationManager.AppSettings["appId"];
                     var secret = ConfigurationManager.AppSettings["secret"];
-                    Dictionary<string, object> fbParams = new Dictionary<string, object>();
+                    Dictionary<string, object> fbParams = new Dictionary<string, object>
+                    {
+                        ["client_id"] = appId,
+                        ["grant_type"] = "fb_exchange_token",
+                        ["client_secret"] = secret,
+                        ["fb_exchange_token"] = oauthResult.AccessToken
+                    };
 
-                    fbParams["client_id"] = appId;
-                    fbParams["grant_type"] = "fb_exchange_token";
-                    fbParams["client_secret"] = secret;
-                    fbParams["fb_exchange_token"] = oauthResult.AccessToken;
                     JsonObject publishedResponse = fb.Get("/oauth/access_token", fbParams) as JsonObject;
 
                     if (publishedResponse != null)
